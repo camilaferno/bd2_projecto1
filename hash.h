@@ -36,7 +36,7 @@ public:
         input_file.open(filename);
 
         string tmp;
-        stringstream line;
+        //stringstream line;
         if(input_file.is_open()){
             while(getline(input_file,tmp)){
                 insert(tmp);
@@ -88,6 +88,31 @@ public:
         }
 
         output_file.close();
+    }
+
+    string search(int key){
+        int bucket = hash_function(key);
+
+        while(bucket_isfull(bucket)){
+            bucket = hash_table[bucket].overflow_bucket_id;
+        }
+
+        string name_of_txt = to_string(bucket).append(".txt");
+        ifstream search_file;
+        search_file.open(name_of_txt);
+
+        string tmp;
+        stringstream line;
+        if(search_file.is_open()){
+            while(getline(search_file,tmp)){
+                if(tmp.find(to_string(key)) != string::npos){
+                    return tmp;
+                }
+            }
+        }
+        search_file.close();
+
+        return "not found";
     }
 
     void print(){
