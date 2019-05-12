@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 
@@ -22,9 +23,6 @@ public:
         num_blocks = N;
         fd = fd_input;
 
-        ifstream input_file;
-        input_file.open(filename);
-
         //initialize bucket objects
         for(int i=0; i<num_blocks; i++){
             Bucket tmp;
@@ -34,20 +32,14 @@ public:
             hash_table.push_back(tmp);
         }
 
+        ifstream input_file;
+        input_file.open(filename);
+
         string tmp;
         stringstream line;
         if(input_file.is_open()){
             while(getline(input_file,tmp)){
-                int bucket = hash_function(stoi(tmp.substr(0, tmp.find(","))));
-                string name_of_txt = to_string(bucket).append(".txt");
-
-                ofstream output_file;
-                output_file.open(name_of_txt, ios::app);
-                if(output_file.is_open()){
-                    output_file << tmp << endl;
-                }
-                output_file.close();
-
+                insert(tmp);
             }
         }
         input_file.close();
@@ -58,13 +50,49 @@ public:
         return key % num_blocks;
     }
 
-    void insert(){
+    bool bucket_isfull(int bucket){
+        if(hash_table[bucket].counter < fd){
+            return false;
+        }
+        else{ return true;}
+    }
 
+    void insert(string input){
+        int bucket = hash_function(stoi(input.substr(0, input.find(","))));
+
+        while(bucket_isfull(bucket)){
+            if(!hash_table[bucket].overflow_bucket.empty()){
+                bucket = hash_table[bucket].overflow_bucket_id;
+            }
+            else{
+                int size = hash_table.size();
+                Bucket tmp;
+                tmp.bucket_id = size;
+                tmp.bucket_name = to_string(size).append(".txt");
+                hash_table.push_back(tmp);
+
+                hash_table[bucket].overflow_bucket_id = tmp.bucket_id;
+                hash_table[bucket].overflow_bucket = tmp.bucket_name;
+
+                bucket = tmp.bucket_id;
+            }
+        }
+        string name_of_txt = to_string(bucket).append(".txt");
+
+        ofstream output_file;
+        output_file.open(name_of_txt, ios::app);
+
+        if(output_file.is_open()){
+            output_file << input << endl;
+            hash_table[bucket].counter += 1;
+        }
+
+        output_file.close();
     }
 
     void print(){
         for(auto it = hash_table.begin(); it != hash_table.end(); it++){;
-            cout << (*it).bucket_id << " " << (*it).bucket_name << endl;
+            cout << (*it).bucket_id << " " << (*it).bucket_name << " " << (*it).overflow_bucket_id << " " << (*it).overflow_bucket << endl;
         }
     }
 };
