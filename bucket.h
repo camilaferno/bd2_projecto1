@@ -10,8 +10,7 @@ class Bucket{
 public:
     int bucket_id;
     string bucket_name;
-    int overflow_bucket_id;
-    string overflow_bucket = "";
+    Bucket* overflow_bucket = nullptr;
     int counter = 0;
 
     Bucket(){};
