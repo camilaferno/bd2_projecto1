@@ -9,6 +9,8 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <thread>
+#include <mutex>
 
 using namespace std;
 
@@ -17,12 +19,13 @@ private:
     int HashTable_size;
     int fd;
     int num_buckets = 0;
-
-    vector<Bucket> hash_table;
+    mutex m;
+    Bucket* hash_table;
 
 public:
     Hash(int N, int fd_input, string filename){
         HashTable_size = N;
+        hash_table = new Bucket[N];
         fd = fd_input;
 
         //initialize bucket objects
@@ -31,7 +34,7 @@ public:
             tmp.bucket_id = i;
             tmp.bucket_name = to_string(i).append(".txt");
 
-            hash_table.push_back(tmp);
+            hash_table[i] = tmp;
         }
         num_buckets = HashTable_size;
 
@@ -62,7 +65,7 @@ public:
 
     void insert(string input){
         Bucket* bucket = &(hash_table[hash_function(stoi(input.substr(0, input.find(","))))]);
-
+        m.lock();
         while(bucket->overflow_bucket){
             bucket = bucket->overflow_bucket;
         }
@@ -90,6 +93,7 @@ public:
         }
 
         output_file.close();
+        m.unlock();
     }
 
 
@@ -123,9 +127,9 @@ public:
 
 
     void print(){
-        for(auto it = hash_table.begin(); it != hash_table.end(); it++){;
-            cout << (*it).bucket_id << " " << (*it).bucket_name;
-            Bucket *tmp = (*it).overflow_bucket;
+        for(int i = 0; i < HashTable_size; i++){;
+            cout << (hash_table[i]).bucket_id << " " << (hash_table[i]).bucket_name;
+            Bucket *tmp = (hash_table[i]).overflow_bucket;
             while(tmp){
                 cout << " -> " << tmp->bucket_id << " " << tmp->bucket_name;
                 tmp = tmp->overflow_bucket;
