@@ -50,33 +50,31 @@ public:
             }
             input_file.close();
 
-	    ofstream hash_file;
-	    hash_file.open("hash.txt");
-	    if(hash_file.is_open()){
-		    hash_file << to_string(HashTable_size) << endl;
-		    hash_file << to_string(num_buckets) << endl;
-		    hash_file << to_string(fd) << endl;
-	    }
-	    hash_file.close();
+            ofstream hash_file;
+            hash_file.open("hash.txt");
+            if(hash_file.is_open()){
+                hash_file << to_string(HashTable_size) << endl;
+                hash_file << to_string(num_buckets) << endl;
+                hash_file << to_string(fd) << endl;
+            }
+            hash_file.close();
 
-            //Creation of index files
-	    for (int i = 0; i < HashTable_size; i++){
-            	ofstream index_file;
-	        index_file.open(to_string(i).append("index.txt"));
-        	if(index_file.is_open()){
+                //Creation of index files
+            for (int i = 0; i < HashTable_size; i++){
+                ofstream index_file;
+                index_file.open(to_string(i).append("index.txt"));
+                if(index_file.is_open()){
                     index_file << (hash_table[i]).bucket_name << endl;
                     Bucket *tmp = (hash_table[i]).overflow_bucket;
                     while(tmp){
                         index_file << tmp->bucket_name << endl;
                         tmp = tmp->overflow_bucket;
                     }
-            	}
-            	index_file.close();
-	    }
+                }
+                index_file.close();
+            }
         }
-	else
-	    Hash("hash.txt");
-
+        else Hash("hash.txt");
     }
 
     Hash(string hash){
@@ -91,7 +89,7 @@ public:
             getline(hash_file, tmp);
             fd = stoi(tmp);
         }
-	hash_file.close();
+        hash_file.close();
     }
 
 
@@ -145,11 +143,9 @@ public:
         bucket_table.open(to_string(bucket_id).append("index.txt"));
         string bucket, tmp;
         if(bucket_table.is_open()){
-	    cout << "buscando ultimo bucket\n"; 
-	    while(getline(bucket_table, tmp)){
-	    	bucket = tmp;
-	    }
-	    cout << "ultimo bucket: " << bucket << endl;
+            while(getline(bucket_table, tmp)){
+                bucket = tmp;
+            }
         }
         bucket_table.close();
 
@@ -157,49 +153,40 @@ public:
         int bucket_counter = 0;
         bucket_file.open(bucket);
         if(bucket_file.is_open()){
-            cout << "opened " << bucket << endl;
             while(getline(bucket_file,tmp))
                 bucket_counter++;
-	    cout << "number of items in bucket: " << bucket_counter << "/" << fd << endl;
             bucket_file.close();
-	    if (bucket_counter < fd){
+            if (bucket_counter < fd){
                 //insertar aca
                 ofstream newbucket;
                 newbucket.open(bucket, ios::app);
-                if(newbucket.is_open()){
-		    cout << "opened " << bucket << endl;
-	    	    cout << "item to insert: " << input << endl;	    
+                if(newbucket.is_open()){   
                     newbucket << input << endl;
-		}
-		newbucket.close();
-                cout << "closed " << bucket << endl;
+                }
+                newbucket.close();
             }
             else{
-                //crear nuevi bucket
+                //crear nuevo bucket
                 ofstream newbucket;
                 newbucket.open(to_string(num_buckets).append(".txt"));
                 if(newbucket.is_open()){
-		    cout << "opened " << num_buckets << ".txt\n";
-		    newbucket << input << endl;
-		    ofstream index;
-		    index.open(to_string(bucket_id).append("index.txt"), ios::app);
-		    if(index.is_open())
-			index << to_string(num_buckets).append(".txt") << endl;
-		    num_buckets++;
-		    cout << "number of buckets: " << num_buckets << endl;
-		    index.close();
-		}
+                newbucket << input << endl;
+                ofstream index;
+                index.open(to_string(bucket_id).append("index.txt"), ios::app);
+                if(index.is_open())
+                index << to_string(num_buckets).append(".txt") << endl;
+                num_buckets++;
+                index.close();
+                }
                 newbucket.close();
-		ofstream hash_file;
-	        hash_file.open("hash.txt");
-        	if(hash_file.is_open()){
+		        ofstream hash_file;
+	            hash_file.open("hash.txt");
+                if(hash_file.is_open()){
                     hash_file << to_string(HashTable_size) << endl;
-            	    hash_file << to_string(num_buckets) << endl;
-            	    cout << "updated number of buckets to " << num_buckets << endl;
-            	    hash_file << to_string(fd) << endl;
-        	}
-		hash_file.close();
-
+                    hash_file << to_string(num_buckets) << endl;
+                    hash_file << to_string(fd) << endl;
+                }
+		        hash_file.close();
             }
         }
         m.unlock();
@@ -208,33 +195,43 @@ public:
 
     string search(int key){
         int bucket_id = hash_function(key);
-	ifstream index;
-	index.open(to_string(bucket_id).append("index.txt"));
-	if(index.is_open()){
-	    string bucket;
-            while(getline(index, bucket)){
-            	cout << bucket << endl;
- 	        ifstream search_file;
-        	search_file.open(bucket);
+	    ifstream index;
+	    index.open(to_string(bucket_id).append("index.txt"));
+        if(index.is_open()){
+            string bucket;
+                while(getline(index, bucket)){
+                    ifstream search_file;
+                    search_file.open(bucket);
 
-            	if(search_file.is_open()){
-		    string tmp;
-                    while(getline(search_file,tmp)){
-                    	if(tmp.find(to_string(key)) != string::npos){
-                            return tmp;
-                    	}
+                    if(search_file.is_open()){
+                        string tmp;
+                        while(getline(search_file,tmp)){
+                            if(tmp.find(to_string(key)) != string::npos){
+                                    return tmp;
+                            }
+                        }
                     }
-            	}
-            	search_file.close();
-            }
-	}
-	index.close();
-	return "404 Not Found";
+                    search_file.close();
+                }
+        }
+        index.close();
+        return "404 Not Found";
     }
 
     bool is_file_exist(string fileName){
         ifstream infile(fileName);
         return infile.good();
+    }
+
+    void removeHash(){
+        bool u_sure = false;
+        
+        cout << "This will remove all txt files so that a new Hash can be created. Are you sure? (1/0) ";
+        cin >> u_sure;
+        if(u_sure){
+            system("rm *.txt");
+        }
+        else{ cout << "not removed" << endl;}
     }
 
 };
