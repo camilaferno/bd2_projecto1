@@ -19,79 +19,8 @@ private:
     int HashTable_size;
     int fd;
     int num_buckets = 0;
-    mutex m;
     Bucket* hash_table;
-
-public:
-    Hash(int N, int fd_input, string filename){
-        if(!is_file_exist("hash.txt")){
-            HashTable_size = N;
-            hash_table = new Bucket[N];
-            fd = fd_input;
-
-            //initialize bucket objects
-            for(int i=0; i<HashTable_size; i++){
-                Bucket tmp;
-                tmp.bucket_id = i;
-                tmp.bucket_name = to_string(i).append(".txt");
-
-                hash_table[i] = tmp;
-            }
-            num_buckets = HashTable_size;
-
-            ifstream input_file;
-            input_file.open(filename);
-
-            string tmp;
-            if(input_file.is_open()){
-                while(getline(input_file,tmp)){
-                    insert_hash(tmp);
-                }
-            }
-            input_file.close();
-
-            ofstream hash_file;
-            hash_file.open("hash.txt");
-            if(hash_file.is_open()){
-                hash_file << to_string(HashTable_size) << endl;
-                hash_file << to_string(num_buckets) << endl;
-                hash_file << to_string(fd) << endl;
-            }
-            hash_file.close();
-
-                //Creation of index files
-            for (int i = 0; i < HashTable_size; i++){
-                ofstream index_file;
-                index_file.open(to_string(i).append("index.txt"));
-                if(index_file.is_open()){
-                    index_file << (hash_table[i]).bucket_name << endl;
-                    Bucket *tmp = (hash_table[i]).overflow_bucket;
-                    while(tmp){
-                        index_file << tmp->bucket_name << endl;
-                        tmp = tmp->overflow_bucket;
-                    }
-                }
-                index_file.close();
-            }
-        }
-        else Hash("hash.txt");
-    }
-
-    Hash(string hash){
-        ifstream hash_file;
-        hash_file.open(hash);
-        if(hash_file.is_open()){
-            string tmp;
-            getline(hash_file, tmp);
-            HashTable_size = stoi(tmp);
-            getline(hash_file, tmp);
-            num_buckets = stoi(tmp);
-            getline(hash_file, tmp);
-            fd = stoi(tmp);
-        }
-        hash_file.close();
-    }
-
+    mutex mu;
 
     int hash_function(int key){
         return key % HashTable_size;
@@ -102,6 +31,11 @@ public:
             return false;
         }
         else{ return true;}
+    }
+
+    bool is_file_exist(string fileName){
+        ifstream infile(fileName);
+        return infile.good();
     }
 
     void insert_hash(string input){
@@ -135,10 +69,83 @@ public:
         output_file.close();
     }
 
+public:
+    Hash(int N, int fd_input, string filename){
+        if(!is_file_exist("hash.txt")){
+            HashTable_size = N;
+            hash_table = new Bucket[N];
+            fd = fd_input;
+
+            //initialize bucket objects
+            for(int i=0; i<HashTable_size; i++){
+                Bucket tmp;
+                tmp.bucket_id = i;
+                tmp.bucket_name = to_string(i).append(".txt");
+
+                hash_table[i] = tmp;
+            }
+            num_buckets = HashTable_size;
+
+            ifstream input_file;
+            input_file.open(filename);
+
+            //first time hash
+            string tmp;
+            if(input_file.is_open()){
+                while(getline(input_file,tmp)){
+                    insert_hash(tmp);
+                }
+            }
+            input_file.close();
+
+            //Create hash.txt
+            ofstream hash_file;
+            hash_file.open("hash.txt");
+            if(hash_file.is_open()){
+                hash_file << to_string(HashTable_size) << endl;
+                hash_file << to_string(num_buckets) << endl;
+                hash_file << to_string(fd) << endl;
+            }
+            hash_file.close();
+
+            //Creation of index files
+            for (int i = 0; i < HashTable_size; i++){
+                ofstream index_file;
+                index_file.open(to_string(i).append("index.txt"));
+                if(index_file.is_open()){
+                    index_file << (hash_table[i]).bucket_name << endl;
+                    Bucket *tmp = (hash_table[i]).overflow_bucket;
+                    while(tmp){
+                        index_file << tmp->bucket_name << endl;
+                        tmp = tmp->overflow_bucket;
+                    }
+                }
+                index_file.close();
+            }
+        }
+        else Hash("hash.txt");
+    }
+
+    Hash(string hash){
+        ifstream hash_file;
+        hash_file.open(hash);
+        if(hash_file.is_open()){
+            string tmp;
+            getline(hash_file, tmp);
+            HashTable_size = stoi(tmp);
+            getline(hash_file, tmp);
+            num_buckets = stoi(tmp);
+            getline(hash_file, tmp);
+            fd = stoi(tmp);
+        }
+        hash_file.close();
+    }
+
     void insert(string input){
         int bucket_id = hash_function(stoi(input.substr(0, input.find(","))));
-        m.lock();
+        mu.lock();
 
+        //read until bucket = last overflow bucket
         ifstream bucket_table;
         bucket_table.open(to_string(bucket_id).append("index.txt"));
         string bucket, tmp;
@@ -189,7 +196,7 @@ public:
 		        hash_file.close();
             }
         }
-        m.unlock();
+        mu.unlock();
     }
 
 
@@ -216,11 +223,6 @@ public:
         }
         index.close();
         return "404 Not Found";
-    }
-
-    bool is_file_exist(string fileName){
-        ifstream infile(fileName);
-        return infile.good();
     }
 
     void removeHash(){
